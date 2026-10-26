@@ -21,9 +21,12 @@ const sourceSerif = Source_Serif_4({
 });
 
 const siteUrl =
-  process.env.VERCEL_URL === undefined
-    ? "http://localhost:3000"
-    : `https://${process.env.VERCEL_URL}`;
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL !== undefined
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL !== undefined
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

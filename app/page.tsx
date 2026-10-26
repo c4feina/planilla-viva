@@ -9,7 +9,7 @@ import {
 } from "@/lib/mock/data";
 
 export const metadata: Metadata = {
-  title: "Tablero",
+  title: { absolute: "Tablero · Planilla Viva" },
 };
 
 export default function TableroPage() {
