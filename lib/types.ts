@@ -73,6 +73,12 @@ export interface ParametrosAcademicos {
   tardanzaFraccion: number;
 }
 
+export interface CicloLectivo {
+  anio: number;
+  inicio: string;
+  fin: string;
+}
+
 export interface ResumenAsistencia {
   horasDictadas: number;
   horasAsistidas: number;
@@ -117,4 +123,8 @@ export interface AcademicState {
   cursadas: Cursada[];
   documentos: DocumentoAlumno[];
   historial: CambioAlumno[];
+  clases: Clase[];
+  evaluaciones: Evaluacion[];
+  parametros: ParametrosAcademicos;
+  ciclo: CicloLectivo;
 }

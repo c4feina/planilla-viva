@@ -22,7 +22,7 @@ export function ListadoComisiones({
   unidades: readonly UnidadCurricular[];
   docentes: readonly Docente[];
 }) {
-  const { alumnos, cursadas } = useAcademicStore();
+  const { alumnos, cursadas, ciclo } = useAcademicStore();
   const [query, setQuery] = useState("");
   const [year, setYear] = useState<YearFilter>("todos");
   const rows = useMemo(
@@ -57,7 +57,7 @@ export function ListadoComisiones({
     <div>
       <PageHeader
         title="Materias"
-        description={`Ciclo lectivo 2026 · ${comisiones.length} materias · ${totalAlumnos} alumnos activos`}
+        description={`Ciclo lectivo ${ciclo.anio} · ${comisiones.length} materias · ${totalAlumnos} alumnos activos`}
       />
 
       <FiltrosComisiones

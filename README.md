@@ -1,8 +1,20 @@
 # Planilla Viva
 
-Prototipo frontend del registro académico interno para el Profesorado de Educación Física del Instituto Privado de Merlo.
+Demo frontend del registro académico interno para el Profesorado de Educación Física del **Instituto Privado de Merlo**.
 
-> **Demo:** datos ficticios, sin backend ni autenticación. Los cambios viven en memoria y se reinician al recargar la página.
+> **Demo:** datos ficticios, sin backend ni autenticación. Los cambios se guardan en el navegador y se pueden reiniciar desde el aviso de demo.
+
+## Qué incluye
+
+- Tablero con métricas, alertas y estado por materia.
+- Materias con planilla de cursada, asistencia y notas.
+- Corrección de asistencia con historial por alumno.
+- Carga de notas por evaluación con recálculo automático de la condición.
+- Ficha de alumno con situación académica, documentos PDF e historial.
+- Configuración de reglas académicas y calendario del ciclo.
+- Calendario de evaluaciones por materia.
+- Plantilla de Excel de ejemplo descargable.
+- Modo claro y oscuro, escritorio y celular.
 
 ## Requisitos
 
@@ -44,6 +56,40 @@ npm run dev -- --hostname 0.0.0.0
 
 Buscá la IP local con `ipconfig` y abrí `http://TU_IP:3000`. Aceptá el permiso de firewall de Windows si aparece.
 
+## Configuración
+
+La pantalla **Configuración** permite ajustar:
+
+- Porcentaje mínimo de asistencia.
+- Nota de aprobación y nota de promoción.
+- Si las justificaciones computan.
+- Cuánto suma una tardanza.
+- Año, inicio y fin del ciclo lectivo.
+
+Al guardar, se recalculan las condiciones de todas las cursadas. Los valores iniciales son de ejemplo: el instituto tiene que confirmarlos.
+
+La **cuota** es un dato administrativo (marzo a diciembre) y no condiciona la regularidad académica.
+
+## Excel de ejemplo
+
+En **Excel** podés descargar `planilla-viva-ejemplo.xlsx` con las hojas:
+
+- Alumnos
+- Materias
+- Inscripciones
+- Asistencias
+- Notas
+- Parámetros
+- Calendario
+
+La plantilla sirve como referencia de columnas. La importación automática queda para la etapa con backend.
+
+Para regenerar el archivo:
+
+```powershell
+npm run generate:template
+```
+
 ## Build de producción
 
 ```powershell
@@ -60,29 +106,28 @@ npm run build
 npx tsx scripts/validate-data.ts
 ```
 
-## Alcance del prototipo
+## Datos de demo
 
-- Tablero, materias, planilla, toma de asistencia, notas, alumnos, ficha y documentos PDF.
-- Una sola oferta por materia y año; la UI dice “Materias”.
-- La asistencia se mide en horas y la condición se calcula automáticamente.
-- Las correcciones de asistencia quedan en el historial de la ficha.
-- Los documentos PDF se guardan en memoria durante la sesión.
+- 89 alumnos, 47 materias, 1086 cursadas y 658 clases.
+- Docentes y alumnos ficticios.
+- Sin datos personales reales.
+- Las notas, asistencias, cambios de clase y cambios de configuración viven en `localStorage`.
+- Los PDFs cargados se mantienen solo hasta recargar la página.
 
 ## Limitaciones conocidas
 
-- Sin backend, base de datos, login ni permisos reales.
-- Los cambios se pierden al recargar.
-- “Guardar notas” todavía no persiste ni recalcula la condición: es la próxima corrección pendiente.
-- En mobile, “Tomar asistencia” edita la última clase normal; la planilla permite corregir clases anteriores desde desktop.
-- No cargar datos reales de alumnos.
+- No hay backend, base de datos ni autenticación.
+- La condición se calcula en el navegador.
+- No hay importación real de Excel, finales ni mesas de examen.
+- No se generan PDFs institucionales.
+- El estado se guarda por navegador: no se comparte entre dispositivos.
 
-## Deploy en Vercel
+## Deploy
 
-El proyecto se puede desplegar como demo en Vercel sin variables de entorno:
+Pensado para Vercel. El proyecto es un Next.js estándar:
 
-1. Subir el repo a GitHub.
-2. Importarlo en https://vercel.com/new.
-3. Framework: **Next.js**. Root Directory: `./` si el repo es esta carpeta.
-4. Deploy.
+```powershell
+npm run build
+```
 
-Para uso real hace falta primero el backend Django + PostgreSQL + autenticación.
+En Vercel, importar el repositorio y usar la configuración por defecto. No requiere variables de entorno.

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PlanillaComision } from "@/components/planilla/planilla-comision";
-import { parametrosAcademicos } from "@/lib/mock/data";
 import { getComisionDetalle } from "@/lib/mock/queries";
 
 type PageProps = {
@@ -31,9 +30,6 @@ export default async function PlanillaPage({ params }: PageProps) {
       comision={detalle.comision}
       unidad={detalle.unidad}
       docentes={detalle.docentes}
-      clases={detalle.clases}
-      evaluaciones={detalle.evaluaciones}
-      parametros={parametrosAcademicos}
     />
   );
 }

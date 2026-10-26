@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -11,7 +11,7 @@ import { TabsEvaluaciones } from "@/components/notas/tabs-evaluaciones";
 import { Button } from "@/components/ui/button";
 import { getCursadasDeComision, getDocentesLabel, type CursadaConAlumno } from "@/lib/academic";
 import { formatAnio, formatFecha } from "@/lib/format";
-import { useAcademicStore } from "@/lib/store/academic-store";
+import { useAcademicDispatch, useAcademicStore } from "@/lib/store/academic-store";
 import type { Comision, Docente, Evaluacion, UnidadCurricular } from "@/lib/types";
 import { validateNota } from "@/lib/validaciones";
 
@@ -35,19 +35,31 @@ function buildInitialValues(
   return initial;
 }
 
+function parseNota(value: string): number | undefined {
+  const trimmed = value.trim();
+
+  if (trimmed === "") {
+    return undefined;
+  }
+
+  return Number.parseInt(trimmed, 10);
+}
+
 export function NotasComision({
   comision,
   unidad,
   docentes,
-  evaluaciones,
 }: {
   comision: Comision;
   unidad: UnidadCurricular;
   docentes: readonly Docente[];
-  evaluaciones: readonly Evaluacion[];
 }) {
-  const { alumnos, cursadas } = useAcademicStore();
+  const { alumnos, cursadas, evaluaciones: todasLasEvaluaciones } = useAcademicStore();
+  const dispatch = useAcademicDispatch();
   const rows = getCursadasDeComision(cursadas, alumnos, comision.id);
+  const evaluaciones = todasLasEvaluaciones
+    .filter((evaluacion) => evaluacion.comision === comision.id)
+    .sort((left, right) => left.fecha.localeCompare(right.fecha));
   const [activeId, setActiveId] = useState(evaluaciones[0]?.id ?? "");
   const [notas, setNotas] = useState<Record<string, Record<string, string>>>(() =>
     buildInitialValues(rows, evaluaciones),
@@ -56,6 +68,17 @@ export function NotasComision({
   const active = evaluaciones.find((evaluacion) => evaluacion.id === activeId) ?? evaluaciones[0];
   const valores = active === undefined ? {} : (notas[active.id] ?? {});
   const hayErrores = rows.some(({ cursada }) => validateNota(valores[cursada.id] ?? "") !== null);
+
+  useEffect(() => {
+    const evaluacionesActuales = todasLasEvaluaciones
+      .filter((evaluacion) => evaluacion.comision === comision.id)
+      .sort((left, right) => left.fecha.localeCompare(right.fecha));
+    const filasActuales = getCursadasDeComision(cursadas, alumnos, comision.id);
+
+    // Sincroniza el borrador con las notas guardadas y con la hidratación inicial.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotas(buildInitialValues(filasActuales, evaluacionesActuales));
+  }, [cursadas, alumnos, todasLasEvaluaciones, comision.id]);
 
   function handleChange(cursadaId: string, value: string) {
     if (active === undefined) {
@@ -70,12 +93,46 @@ export function NotasComision({
   }
 
   function handleSave() {
+    if (active === undefined) {
+      return;
+    }
+
     if (hayErrores) {
       setStatus({ text: "Revisá las notas fuera de rango antes de guardar.", error: true });
       return;
     }
 
-    setStatus({ text: "Notas guardadas", error: false });
+    const valoresNumericos: Record<string, number | undefined> = {};
+
+    for (const { cursada } of rows) {
+      valoresNumericos[cursada.id] = parseNota(valores[cursada.id] ?? "");
+    }
+
+    const cambiadas = rows.filter(({ cursada }) => {
+      const anterior = cursada.notas[active.id];
+      const siguiente = valoresNumericos[cursada.id];
+      return anterior !== siguiente;
+    });
+
+    if (cambiadas.length === 0) {
+      setStatus({ text: "No había cambios para guardar.", error: false });
+      return;
+    }
+
+    dispatch({
+      type: "saveNotas",
+      cursadaIds: cambiadas.map(({ cursada }) => cursada.id),
+      evaluacionId: active.id,
+      valores: valoresNumericos,
+      fecha: new Date().toISOString(),
+    });
+
+    setStatus({
+      text: `Notas guardadas · ${cambiadas.length} ${
+        cambiadas.length === 1 ? "alumno actualizado" : "alumnos actualizados"
+      }. La condición se recalculó.`,
+      error: false,
+    });
   }
 
   return (
@@ -94,8 +151,8 @@ export function NotasComision({
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
-        Carga de notas por evaluación. La condición actual se muestra como referencia y no se
-        recalcula en esta pantalla.
+        Cargá las notas de cada evaluación. Al guardar, la condición de cada alumno se recalcula con
+        la asistencia y las notas vigentes.
       </p>
 
       {evaluaciones.length === 0 || active === undefined ? (

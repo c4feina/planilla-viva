@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { BarraGuardado } from "@/components/asistencia/barra-guardado";
 import { ControlesClase } from "@/components/asistencia/controles-clase";
@@ -17,9 +17,8 @@ import type {
   Clase,
   Comision,
   Docente,
-  Evaluacion,
+  HorasClase,
   MarcaAsistencia,
-  ParametrosAcademicos,
   TipoClase,
   UnidadCurricular,
 } from "@/lib/types";
@@ -28,32 +27,50 @@ export function AsistenciaComision({
   comision,
   unidad,
   docentes,
-  clases,
-  evaluaciones,
-  parametros,
 }: {
   comision: Comision;
   unidad: UnidadCurricular;
   docentes: readonly Docente[];
-  clases: readonly Clase[];
-  evaluaciones: readonly Evaluacion[];
-  parametros: ParametrosAcademicos;
 }) {
-  const { alumnos, cursadas } = useAcademicStore();
+  const {
+    alumnos,
+    cursadas,
+    clases: todasLasClases,
+    evaluaciones,
+    parametros,
+  } = useAcademicStore();
   const dispatch = useAcademicDispatch();
   const rows = getCursadasDeComision(cursadas, alumnos, comision.id);
-  const lastNormalClass = [...clases].reverse().find((clase) => clase.tipo === "normal");
-  const [fecha, setFecha] = useState(lastNormalClass?.fecha ?? "");
-  const [tipo, setTipo] = useState<TipoClase>(lastNormalClass?.tipo ?? "normal");
-  const [horas, setHoras] = useState<number>(lastNormalClass?.horas ?? 2);
+  const clases = todasLasClases
+    .filter((clase) => clase.comision === comision.id)
+    .sort((left, right) => right.fecha.localeCompare(left.fecha));
+  const evaluacionesDeComision = evaluaciones.filter(
+    (evaluacion) => evaluacion.comision === comision.id,
+  );
+  const normalClasses = clases.filter((clase) => clase.tipo === "normal");
+  const firstClass = normalClasses[0] ?? clases[0];
+  const [selectedClassId, setSelectedClassId] = useState(firstClass?.id ?? "");
+  const [fecha, setFecha] = useState(firstClass?.fecha ?? "");
+  const [tipo, setTipo] = useState<TipoClase>(firstClass?.tipo ?? "normal");
+  const [horas, setHoras] = useState<number>(firstClass?.horas ?? 2);
   const [presence, setPresence] = useState<Record<string, boolean>>(() =>
-    buildPresenceFromClass(rows, lastNormalClass?.id),
+    buildPresenceFromClass(rows, firstClass?.id),
   );
   const [changed, setChanged] = useState<ReadonlySet<string>>(() => new Set());
   const [hasChanges, setHasChanges] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const selectedClass = clases.find((clase) => clase.id === selectedClassId);
   const computable = tipo === "normal";
   const presentCount = rows.filter((row) => presence[row.cursada.id] === true).length;
+
+  // Sincroniza el formulario con la clase elegida y con los datos hidratados.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPresence(buildPresenceFromClass(rows, selectedClassId));
+    setChanged(new Set());
+    setHasChanges(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursadas, selectedClassId]);
 
   function markChanged(cursadaId?: string) {
     setHasChanges(true);
@@ -87,22 +104,59 @@ export function AsistenciaComision({
     markChanged();
   }
 
+  function handleClassChange(claseId: string) {
+    const clase = clases.find((item) => item.id === claseId);
+
+    if (clase === undefined) {
+      return;
+    }
+
+    setSelectedClassId(clase.id);
+    setFecha(clase.fecha);
+    setTipo(clase.tipo);
+    setHoras(clase.horas);
+    setPresence(buildPresenceFromClass(rows, clase.id));
+    setChanged(new Set());
+    setHasChanges(false);
+    setStatus(null);
+  }
+
   function handleSave() {
+    if (selectedClass === undefined) {
+      setStatus("Elegí una clase para guardar.");
+      return;
+    }
+
+    const fechaHora = new Date().toISOString();
+    const claseActualizada: Clase = {
+      ...selectedClass,
+      fecha,
+      tipo,
+      horas: Math.min(4, Math.max(1, horas)) as HorasClase,
+    };
+    const cambioDeClase =
+      claseActualizada.fecha !== selectedClass.fecha ||
+      claseActualizada.tipo !== selectedClass.tipo ||
+      claseActualizada.horas !== selectedClass.horas;
+
+    if (cambioDeClase) {
+      dispatch({ type: "updateClase", clase: claseActualizada });
+    }
+
     if (!computable) {
       setStatus(
-        `Clase guardada como ${tipo === "cancelada" ? "cancelada" : "feriado"}`,
+        cambioDeClase
+          ? `Clase guardada como ${tipo === "cancelada" ? "cancelada" : "feriado"}.`
+          : "No había cambios para guardar.",
       );
       setChanged(new Set());
       setHasChanges(false);
       return;
     }
 
-    if (lastNormalClass === undefined) {
-      setStatus("No hay una clase para guardar.");
-      return;
-    }
-
-    const fechaHora = new Date().toISOString();
+    const clasesActualizadas = clases.map((clase) =>
+      clase.id === claseActualizada.id ? claseActualizada : clase,
+    );
     let saved = 0;
 
     for (const row of rows) {
@@ -110,18 +164,18 @@ export function AsistenciaComision({
         continue;
       }
 
-      const anterior = row.cursada.marcas[lastNormalClass.id];
+      const anterior = row.cursada.marcas[selectedClass.id];
       const siguiente: MarcaAsistencia = presence[row.cursada.id] === true ? "P" : "A";
 
       if (anterior === siguiente) {
         continue;
       }
 
-      const marcas = { ...row.cursada.marcas, [lastNormalClass.id]: siguiente };
+      const marcas = { ...row.cursada.marcas, [selectedClass.id]: siguiente };
       const derived = deriveCursada({
-        clases,
+        clases: clasesActualizadas,
         marcas,
-        evaluaciones,
+        evaluaciones: evaluacionesDeComision,
         notas: row.cursada.notas,
         parametros,
       });
@@ -137,14 +191,23 @@ export function AsistenciaComision({
           condicionManual: row.cursada.condicionManual,
         },
         fecha: fechaHora,
-        campo: `Asistencia · ${formatFecha(lastNormalClass.fecha)}`,
+        campo: `Asistencia · ${formatFecha(selectedClass.fecha)}`,
         valorAnterior: getMarcaAsistenciaLabel(anterior),
         valorNuevo: getMarcaAsistenciaLabel(siguiente),
       });
       saved += 1;
     }
 
-    setStatus(saved > 0 ? "Asistencia guardada" : "No había cambios para guardar.");
+    if (saved > 0) {
+      setStatus(
+        `${saved} ${saved === 1 ? "alumno actualizado" : "alumnos actualizados"}. La condición se recalculó.`,
+      );
+    } else if (cambioDeClase) {
+      setStatus("Clase actualizada.");
+    } else {
+      setStatus("No había cambios para guardar.");
+    }
+
     setChanged(new Set());
     setHasChanges(false);
   }
@@ -160,9 +223,12 @@ export function AsistenciaComision({
       <EncabezadoAsistencia comision={comision} unidad={unidad} docentes={docentes} />
 
       <ControlesClase
+        clases={clases}
+        selectedClassId={selectedClassId}
         fecha={fecha}
         tipo={tipo}
         horas={horas}
+        onClassChange={handleClassChange}
         onFechaChange={(value) => {
           setFecha(value);
           markChanged();

@@ -30,7 +30,6 @@ export default async function NotasPage({ params }: PageProps) {
       comision={detalle.comision}
       unidad={detalle.unidad}
       docentes={detalle.docentes}
-      evaluaciones={detalle.evaluaciones}
     />
   );
 }

@@ -20,14 +20,46 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 
+const siteUrl =
+  process.env.VERCEL_URL === undefined
+    ? "http://localhost:3000"
+    : `https://${process.env.VERCEL_URL}`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Planilla Viva · IPM",
     template: "%s · Planilla Viva",
   },
   description:
-    "Sistema interno de gestión académica del Profesorado de Educación Física del Instituto Privado de Merlo.",
+    "Demo del registro académico interno del Profesorado de Educación Física del Instituto Privado de Merlo.",
   applicationName: "Planilla Viva",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_AR",
+    siteName: "Planilla Viva",
+    title: "Planilla Viva · Instituto Privado de Merlo",
+    description:
+      "Una sola planilla, compartida y que calcula sola. Demo con datos ficticios del Profesorado de Educación Física.",
+    images: [
+      {
+        url: "/brand/hero-terciario.jpg",
+        width: 640,
+        height: 413,
+        alt: "Profesorado de Educación Física del Instituto Privado de Merlo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Planilla Viva · Instituto Privado de Merlo",
+    description: "Demo con datos ficticios del Profesorado de Educación Física.",
+    images: ["/brand/hero-terciario.jpg"],
+  },
   icons: {
     icon: "/brand/favicon.jpg",
     apple: "/brand/favicon.jpg",

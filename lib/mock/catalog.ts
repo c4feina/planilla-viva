@@ -1,6 +1,8 @@
 import type { AnioCursada, Docente, ParametrosAcademicos, Regimen } from "@/lib/types";
 
 export const CICLO_LECTIVO = 2026;
+export const CICLO_LECTIVO_INICIO = "2026-03-02";
+export const CICLO_LECTIVO_FIN = "2026-12-18";
 
 interface DocenteSeed extends Docente {
   unidadFija?: string;

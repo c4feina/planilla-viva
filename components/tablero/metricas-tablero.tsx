@@ -8,8 +8,8 @@ interface MetricaProps {
 
 function Metrica({ label, value, context }: MetricaProps) {
   return (
-    <div className="rounded-md border border-border bg-background px-4 py-3">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</p>
+    <div className="px-5 py-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
       <p className="text-xs text-muted-foreground">{context}</p>
     </div>
@@ -26,7 +26,7 @@ export function MetricasTablero({
   asistenciaPromedio: number | null;
 }) {
   return (
-    <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="mb-6 grid grid-cols-1 divide-y divide-border rounded-md border border-border bg-background sm:grid-cols-3 sm:divide-x sm:divide-y-0">
       <Metrica
         label="Alumnos activos"
         value={formatNumero(alumnosActivos)}

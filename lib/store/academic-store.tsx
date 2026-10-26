@@ -3,8 +3,10 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
+  useState,
   type Dispatch,
   type ReactNode,
 } from "react";
@@ -12,16 +14,30 @@ import type {
   AcademicState,
   Alumno,
   CambioAlumno,
+  CicloLectivo,
+  Clase,
   Cursada,
   DocumentoAlumno,
+  Evaluacion,
+  ParametrosAcademicos,
 } from "@/lib/types";
 import { ACTOR_SECRETARIA } from "@/lib/constantes";
 import { CATEGORIA_DOCUMENTO_LABELS } from "@/lib/documentos";
+import { deriveCursada } from "@/lib/mock/derive";
 
 export interface CambioCampo {
   campo: string;
   valorAnterior: string;
   valorNuevo: string;
+}
+
+export interface PersistedAcademicState {
+  alumnos: Alumno[];
+  cursadas: Cursada[];
+  historial: CambioAlumno[];
+  parametros: ParametrosAcademicos;
+  ciclo: CicloLectivo;
+  clases?: Clase[];
 }
 
 export type AcademicAction =
@@ -36,10 +52,83 @@ export type AcademicAction =
       campo: string;
       valorAnterior: string;
       valorNuevo: string;
-    };
+    }
+  | {
+      type: "saveNotas";
+      cursadaIds: string[];
+      evaluacionId: string;
+      valores: Record<string, number | undefined>;
+      fecha: string;
+    }
+  | { type: "updateParametros"; parametros: ParametrosAcademicos }
+  | { type: "updateCiclo"; ciclo: CicloLectivo }
+  | { type: "updateClase"; clase: Clase }
+  | { type: "hydrate"; state: PersistedAcademicState }
+  | { type: "reset" };
+
+export const ACADEMIC_STORAGE_KEY = "planilla-viva-academic-v2";
+const STORAGE_VERSION = 2;
 
 function nombreAlumno(alumno: Alumno): string {
   return `${alumno.apellido}, ${alumno.nombre}`;
+}
+
+function groupByComision<T extends { comision: string }>(
+  items: readonly T[],
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+
+  for (const item of items) {
+    const group = groups.get(item.comision);
+
+    if (group === undefined) {
+      groups.set(item.comision, [item]);
+    } else {
+      group.push(item);
+    }
+  }
+
+  return groups;
+}
+
+function recomputeCursada(
+  cursada: Cursada,
+  clases: readonly Clase[],
+  evaluaciones: readonly Evaluacion[],
+  parametros: ParametrosAcademicos,
+): Cursada {
+  const derived = deriveCursada({
+    clases,
+    marcas: cursada.marcas,
+    evaluaciones,
+    notas: cursada.notas,
+    parametros,
+  });
+
+  return {
+    ...cursada,
+    resumen: derived.resumen,
+    condicion: cursada.condicionManual ? cursada.condicion : derived.condicion,
+  };
+}
+
+function recomputeAll(
+  cursadas: readonly Cursada[],
+  clases: readonly Clase[],
+  evaluaciones: readonly Evaluacion[],
+  parametros: ParametrosAcademicos,
+): Cursada[] {
+  const clasesPorComision = groupByComision(clases);
+  const evaluacionesPorComision = groupByComision(evaluaciones);
+
+  return cursadas.map((cursada) =>
+    recomputeCursada(
+      cursada,
+      clasesPorComision.get(cursada.comision) ?? [],
+      evaluacionesPorComision.get(cursada.comision) ?? [],
+      parametros,
+    ),
+  );
 }
 
 function buildCambios(
@@ -70,9 +159,9 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
   switch (action.type) {
     case "addAlumno":
       return {
+        ...state,
         alumnos: [...state.alumnos, action.alumno],
         cursadas: [...state.cursadas, ...action.cursadas],
-        documentos: state.documentos,
         historial: [
           ...state.historial,
           {
@@ -166,6 +255,116 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
       };
     }
 
+    case "saveNotas": {
+      const evaluacion = state.evaluaciones.find(
+        (item) => item.id === action.evaluacionId,
+      );
+
+      if (evaluacion === undefined) {
+        return state;
+      }
+
+      const clasesPorComision = groupByComision(state.clases);
+      const evaluacionesPorComision = groupByComision(state.evaluaciones);
+      const historial = [...state.historial];
+      const ids = new Set(action.cursadaIds);
+      let huboCambios = false;
+
+      const cursadas = state.cursadas.map((cursada) => {
+        if (!ids.has(cursada.id)) {
+          return cursada;
+        }
+
+        const anterior = cursada.notas[evaluacion.id];
+        const siguiente = action.valores[cursada.id];
+
+        if (anterior === siguiente) {
+          return cursada;
+        }
+
+        const notas = { ...cursada.notas };
+
+        if (siguiente === undefined) {
+          delete notas[evaluacion.id];
+        } else {
+          notas[evaluacion.id] = siguiente;
+        }
+
+        const derivada = recomputeCursada(
+          { ...cursada, notas },
+          clasesPorComision.get(cursada.comision) ?? [],
+          evaluacionesPorComision.get(cursada.comision) ?? [],
+          state.parametros,
+        );
+        const alumno = state.alumnos.find((item) => item.id === cursada.alumno);
+
+        if (alumno !== undefined) {
+          historial.push({
+            id: `hist-${historial.length + 1}`,
+            fecha: action.fecha,
+            actor: ACTOR_SECRETARIA,
+            alumnoId: alumno.id,
+            alumnoNombre: nombreAlumno(alumno),
+            campo: `Nota · ${evaluacion.nombre}`,
+            valorAnterior: anterior === undefined ? "Sin nota" : String(anterior),
+            valorNuevo: siguiente === undefined ? "Sin nota" : String(siguiente),
+          });
+        }
+
+        huboCambios = true;
+        return derivada;
+      });
+
+      return huboCambios ? { ...state, cursadas, historial } : state;
+    }
+
+    case "updateParametros": {
+      const cursadas = recomputeAll(
+        state.cursadas,
+        state.clases,
+        state.evaluaciones,
+        action.parametros,
+      );
+
+      return { ...state, parametros: action.parametros, cursadas };
+    }
+
+    case "updateCiclo":
+      return { ...state, ciclo: action.ciclo };
+
+    case "updateClase": {
+      const clases = state.clases.map((clase) =>
+        clase.id === action.clase.id ? action.clase : clase,
+      );
+      const cursadas = recomputeAll(
+        state.cursadas,
+        clases,
+        state.evaluaciones,
+        state.parametros,
+      );
+
+      return { ...state, clases, cursadas };
+    }
+
+    case "hydrate": {
+      const clases = action.state.clases ?? state.clases;
+      const cursadas = recomputeAll(
+        action.state.cursadas,
+        clases,
+        state.evaluaciones,
+        action.state.parametros,
+      );
+
+      return {
+        ...state,
+        ...action.state,
+        cursadas,
+        clases,
+        evaluaciones: state.evaluaciones,
+        documentos: state.documentos,
+      };
+    }
+
     case "addDocumento": {
       const alumno = state.alumnos.find((item) => item.id === action.documento.alumnoId);
 
@@ -192,6 +391,9 @@ export function academicReducer(state: AcademicState, action: AcademicAction): A
       };
     }
 
+    case "reset":
+      return state;
+
     default:
       return state;
   }
@@ -211,7 +413,60 @@ export function AcademicStoreProvider({
   initialState: AcademicState;
   children: ReactNode;
 }) {
-  const [state, dispatch] = useReducer(academicReducer, initialState);
+  const [state, dispatch] = useReducer(
+    (current: AcademicState, action: AcademicAction): AcademicState =>
+      action.type === "reset" ? initialState : academicReducer(current, action),
+    initialState,
+  );
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(ACADEMIC_STORAGE_KEY);
+
+      if (raw !== null) {
+        const parsed = JSON.parse(raw) as {
+          version?: number;
+          state?: PersistedAcademicState;
+        };
+
+        if (parsed.version === STORAGE_VERSION && parsed.state !== undefined) {
+          dispatch({ type: "hydrate", state: parsed.state });
+        }
+      }
+    } catch {
+      // Si el navegador bloquea el almacenamiento, la demo sigue en memoria.
+    }
+
+    // Habilita la persistencia recién cuando el estado guardado ya está aplicado.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    try {
+      const persisted: PersistedAcademicState = {
+        alumnos: state.alumnos,
+        cursadas: state.cursadas,
+        historial: state.historial,
+        parametros: state.parametros,
+        ciclo: state.ciclo,
+        clases: state.clases,
+      };
+
+      window.localStorage.setItem(
+        ACADEMIC_STORAGE_KEY,
+        JSON.stringify({ version: STORAGE_VERSION, state: persisted }),
+      );
+    } catch {
+      // Sin persistencia, la demo sigue funcionando en memoria.
+    }
+  }, [state, hydrated]);
+
   const value = useMemo(() => ({ state, dispatch }), [state]);
 
   return <AcademicStoreContext.Provider value={value}>{children}</AcademicStoreContext.Provider>;

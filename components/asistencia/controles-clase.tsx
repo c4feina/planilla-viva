@@ -3,7 +3,15 @@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { TipoClase } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatFecha } from "@/lib/format";
+import type { Clase, TipoClase } from "@/lib/types";
 
 const CLASS_TYPES: readonly { value: TipoClase; label: string }[] = [
   { value: "normal", label: "Normal" },
@@ -11,17 +19,29 @@ const CLASS_TYPES: readonly { value: TipoClase; label: string }[] = [
   { value: "feriado", label: "Feriado" },
 ];
 
+const CLASS_TYPE_LABELS: Record<TipoClase, string> = {
+  normal: "Normal",
+  cancelada: "Cancelada",
+  feriado: "Feriado",
+};
+
 export function ControlesClase({
+  clases,
+  selectedClassId,
   fecha,
   tipo,
   horas,
+  onClassChange,
   onFechaChange,
   onTipoChange,
   onHorasChange,
 }: {
+  clases: readonly Clase[];
+  selectedClassId: string;
   fecha: string;
   tipo: TipoClase;
   horas: number;
+  onClassChange: (value: string) => void;
   onFechaChange: (value: string) => void;
   onTipoChange: (value: TipoClase) => void;
   onHorasChange: (value: number) => void;
@@ -33,6 +53,26 @@ export function ControlesClase({
 
   return (
     <div className="mb-5 space-y-4">
+      <div>
+        <Label htmlFor="clase-seleccionada">Clase a editar</Label>
+        <Select value={selectedClassId} onValueChange={onClassChange}>
+          <SelectTrigger id="clase-seleccionada" className="mt-1.5 w-full">
+            <SelectValue placeholder="Elegí una clase" />
+          </SelectTrigger>
+          <SelectContent>
+            {clases.map((clase) => (
+              <SelectItem key={clase.id} value={clase.id}>
+                {formatFecha(clase.fecha)} · {clase.horas} h ·{" "}
+                {CLASS_TYPE_LABELS[clase.tipo]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Elegí la clase que querés corregir. También podés cambiar la fecha, el tipo o las horas.
+        </p>
+      </div>
+
       <div>
         <Label htmlFor="fecha-clase">Fecha de la clase</Label>
         <Input

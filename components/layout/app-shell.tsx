@@ -6,13 +6,16 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   CalendarDays,
+  FileSpreadsheet,
   LayoutDashboard,
   Menu,
+  Settings,
   Users,
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { DemoBanner } from "@/components/layout/demo-banner";
 import { QuickSearch } from "@/components/layout/quick-search";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -24,12 +27,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { INSTITUTO } from "@/lib/institucion";
+import { useAcademicStore } from "@/lib/store/academic-store";
 import { cn } from "@/lib/utils";
-
-const INSTITUTO = "Instituto Privado de Merlo";
-const CARRERA = "Profesorado de Educación Física";
-const UBICACION = "Merlo, Buenos Aires";
-const CICLO = "Ciclo lectivo 2026";
 
 interface NavEntry {
   href: string;
@@ -41,6 +41,9 @@ const NAV_ITEMS: NavEntry[] = [
   { href: "/", label: "Tablero", icon: LayoutDashboard },
   { href: "/comisiones", label: "Materias", icon: BookOpen },
   { href: "/alumnos", label: "Alumnos", icon: Users },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays },
+  { href: "/excel", label: "Excel", icon: FileSpreadsheet },
+  { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -92,29 +95,13 @@ function Brand({ compact = false }: { compact?: boolean }) {
           Planilla Viva
         </span>
         <span className="mt-0.5 block text-sm leading-snug font-semibold text-balance">
-          {INSTITUTO}
+          {INSTITUTO.nombre}
         </span>
-        <span className="block text-xs leading-snug text-muted-foreground">{CARRERA}</span>
+        <span className="block text-xs leading-snug text-muted-foreground">
+          {INSTITUTO.carrera}
+        </span>
       </span>
     </Link>
-  );
-}
-
-function BrandPhoto() {
-  return (
-    <div className="mb-3 overflow-hidden rounded-md border border-border bg-background">
-      <Image
-        src="/brand/hero-terciario.jpg"
-        alt="Estudiantes del Profesorado de Educación Física"
-        width={640}
-        height={413}
-        loading="eager"
-        className="h-24 w-full object-cover"
-      />
-      <p className="px-3 py-2 text-xs text-pretty text-muted-foreground">
-        {CARRERA} · {UBICACION}
-      </p>
-    </div>
   );
 }
 
@@ -137,25 +124,27 @@ function NavItem({
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
         active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+          ? "bg-secondary text-foreground"
+          : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
       )}
     >
-      <Icon className="size-4" aria-hidden="true" />
+      <Icon className={cn("size-4", active && "text-primary")} aria-hidden="true" />
       {entry.label}
     </Link>
   );
 }
 
-function SidebarFooter() {
+function CycleFooter() {
+  const { ciclo } = useAcademicStore();
+
   return (
     <div className="border-t border-border p-3">
-      <BrandPhoto />
       <ThemeToggle />
       <p className="flex items-center gap-2 px-3 pt-2 text-xs text-muted-foreground">
         <CalendarDays className="size-3.5" aria-hidden="true" />
-        {CICLO}
+        Ciclo lectivo {ciclo.anio}
       </p>
+      <p className="px-3 pt-1 text-xs text-muted-foreground">Datos ficticios de demostración</p>
     </div>
   );
 }
@@ -165,7 +154,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (pathname.endsWith("/asistencia")) {
-    return <div className="min-h-screen bg-muted/30">{children}</div>;
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <DemoBanner />
+        {children}
+      </div>
+    );
   }
 
   return (
@@ -184,12 +178,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="border-b border-border px-3 py-3">
           <QuickSearch />
         </div>
-        <nav aria-label="Navegación principal" className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+        <nav
+          aria-label="Navegación principal"
+          className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"
+        >
           {NAV_ITEMS.map((entry) => (
             <NavItem key={entry.href} entry={entry} active={isActive(pathname, entry.href)} />
           ))}
         </nav>
-        <SidebarFooter />
+        <CycleFooter />
       </aside>
 
       <div className="md:pl-64">
@@ -215,13 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   </SheetClose>
                 ))}
               </nav>
-              <div className="mt-6">
-                <BrandPhoto />
-              </div>
-              <p className="flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-                <CalendarDays className="size-3.5" aria-hidden="true" />
-                {CICLO}
-              </p>
+              <CycleFooter />
             </SheetContent>
           </Sheet>
           <Brand compact />
@@ -229,6 +220,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <ThemeToggle compact />
           </div>
         </header>
+
+        <DemoBanner />
 
         <main
           id="contenido"

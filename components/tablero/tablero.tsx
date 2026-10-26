@@ -27,7 +27,7 @@ export function Tablero({
   docentes: readonly Docente[];
   evaluaciones: readonly Evaluacion[];
 }) {
-  const { alumnos, cursadas } = useAcademicStore();
+  const { alumnos, cursadas, ciclo } = useAcademicStore();
 
   const anios = useMemo(
     () => buildTablero(comisiones, unidades, cursadas, alumnos),
@@ -51,7 +51,7 @@ export function Tablero({
     <div>
       <PageHeader
         title="Tablero"
-        description="Profesorado de Educación Física · Ciclo lectivo 2026 · Estado académico del instituto"
+        description={`Secretaría Académica · Ciclo lectivo ${ciclo.anio} · Estado académico del instituto`}
       />
 
       <MetricasTablero

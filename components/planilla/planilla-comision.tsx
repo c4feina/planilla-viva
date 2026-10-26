@@ -21,33 +21,26 @@ import { downloadCsv, slugifyFileName, toCsv } from "@/lib/csv";
 import { formatAnio, formatFecha, formatHorasPar, formatPorcentaje } from "@/lib/format";
 import { deriveCursada } from "@/lib/mock/derive";
 import { useAcademicDispatch, useAcademicStore } from "@/lib/store/academic-store";
-import type {
-  Clase,
-  Comision,
-  Docente,
-  Evaluacion,
-  MarcaAsistencia,
-  ParametrosAcademicos,
-  UnidadCurricular,
-} from "@/lib/types";
+import type { Comision, Docente, MarcaAsistencia, UnidadCurricular } from "@/lib/types";
 
 export function PlanillaComision({
   comision,
   unidad,
   docentes,
-  clases,
-  evaluaciones,
-  parametros,
 }: {
   comision: Comision;
   unidad: UnidadCurricular;
   docentes: readonly Docente[];
-  clases: readonly Clase[];
-  evaluaciones: readonly Evaluacion[];
-  parametros: ParametrosAcademicos;
 }) {
-  const { alumnos, cursadas } = useAcademicStore();
+  const { alumnos, cursadas, clases: todasLasClases, evaluaciones, parametros } =
+    useAcademicStore();
   const dispatch = useAcademicDispatch();
+  const clases = todasLasClases
+    .filter((clase) => clase.comision === comision.id)
+    .sort((left, right) => left.fecha.localeCompare(right.fecha));
+  const evaluacionesDeComision = evaluaciones.filter(
+    (evaluacion) => evaluacion.comision === comision.id,
+  );
   const [editable, setEditable] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const rows = getCursadasDeComision(cursadas, alumnos, comision.id);
@@ -119,7 +112,7 @@ export function PlanillaComision({
     const derived = deriveCursada({
       clases,
       marcas,
-      evaluaciones,
+      evaluaciones: evaluacionesDeComision,
       notas: row.cursada.notas,
       parametros,
     });

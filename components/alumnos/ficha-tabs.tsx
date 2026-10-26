@@ -27,10 +27,10 @@ function AlertaCuota() {
     <div className="mb-6 flex items-start gap-3 rounded-md border border-border border-l-4 border-l-destructive bg-destructive/5 px-4 py-3">
       <Wallet className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
       <div>
-        <p className="text-sm font-medium">Cuota pendiente</p>
+        <p className="text-sm font-medium">Cuota administrativa pendiente</p>
         <p className="mt-0.5 text-xs text-pretty text-muted-foreground">
-          Administración marcó la cuota como no al día. Este estado no condiciona la regularidad
-          académica.
+          Administración la marcó como no al día. Es un dato administrativo y no condiciona la
+          regularidad académica.
         </p>
       </div>
     </div>
@@ -156,10 +156,8 @@ export function FichaTabs({
                 {count === undefined ? null : (
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-xs tabular-nums",
-                      selected
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground",
+                      "text-xs tabular-nums",
+                      selected ? "text-primary" : "text-muted-foreground",
                     )}
                   >
                     {formatNumero(count)}

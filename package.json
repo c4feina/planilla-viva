@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:template": "node scripts/generate-excel-template.mjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.4.1",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19.3.0",
     "eslint": "^10.13.0",
     "eslint-config-next": "^16.4.2",
+    "exceljs": "^4.4.0",
     "postcss": "^8.5.31",
     "shadcn": "^4.22.1",
     "tailwindcss": "^4.3.3",

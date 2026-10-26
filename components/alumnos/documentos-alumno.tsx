@@ -96,7 +96,8 @@ export function DocumentosAlumno({ alumnoId }: { alumnoId: string }) {
         Documentos
       </h2>
       <p className="mb-3 text-sm text-muted-foreground">
-        PDFs del alumno: DNI, constancias, comprobantes de cuota y otros.
+        PDFs del alumno: DNI, constancias, comprobantes de cuota y otros. En esta demo los archivos
+        se mantienen hasta recargar la página.
       </p>
 
       <form
