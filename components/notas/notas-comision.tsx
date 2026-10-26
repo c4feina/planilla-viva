@@ -54,7 +54,12 @@ export function NotasComision({
   unidad: UnidadCurricular;
   docentes: readonly Docente[];
 }) {
-  const { alumnos, cursadas, evaluaciones: todasLasEvaluaciones } = useAcademicStore();
+  const {
+    alumnos,
+    cursadas,
+    evaluaciones: todasLasEvaluaciones,
+    ciclo,
+  } = useAcademicStore();
   const dispatch = useAcademicDispatch();
   const rows = getCursadasDeComision(cursadas, alumnos, comision.id);
   const evaluaciones = todasLasEvaluaciones
@@ -139,7 +144,7 @@ export function NotasComision({
     <div>
       <PageHeader
         title={unidad.nombre}
-        description={`${formatAnio(comision.anio)} año · Ciclo lectivo ${comision.cicloLectivo} · ${rows.length} inscriptos · ${getDocentesLabel(docentes)}`}
+        description={`${formatAnio(comision.anio)} año · Ciclo lectivo ${ciclo.anio} · ${rows.length} inscriptos · ${getDocentesLabel(docentes)}`}
         actions={
           <Button asChild variant="outline">
             <Link href={`/comisiones/${comision.id}/planilla`}>

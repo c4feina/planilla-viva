@@ -60,7 +60,7 @@ export function Tablero({
         asistenciaPromedio={asistenciaPromedio}
       />
 
-      <AlertasTablero alertas={alertas} />
+      <AlertasTablero alertas={alertas} anio={ciclo.anio} />
       <EstadoComisiones anios={anios} />
       <DocentesPendientes rows={pendientes} />
     </div>

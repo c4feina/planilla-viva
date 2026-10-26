@@ -89,7 +89,13 @@ function AlertCard({
   );
 }
 
-export function AlertasTablero({ alertas }: { alertas: AlertasTableroData }) {
+export function AlertasTablero({
+  alertas,
+  anio,
+}: {
+  alertas: AlertasTableroData;
+  anio: number;
+}) {
   return (
     <section aria-labelledby="alertas-tablero" className="mb-8">
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -101,7 +107,7 @@ export function AlertasTablero({ alertas }: { alertas: AlertasTableroData }) {
             Señales para revisar antes de cerrar la semana.
           </p>
         </div>
-        <p className="text-xs text-muted-foreground">Ciclo lectivo 2026 · Solo lectura</p>
+        <p className="text-xs text-muted-foreground">Ciclo lectivo {anio} · Solo lectura</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

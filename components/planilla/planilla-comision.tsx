@@ -32,8 +32,14 @@ export function PlanillaComision({
   unidad: UnidadCurricular;
   docentes: readonly Docente[];
 }) {
-  const { alumnos, cursadas, clases: todasLasClases, evaluaciones, parametros } =
-    useAcademicStore();
+  const {
+    alumnos,
+    cursadas,
+    clases: todasLasClases,
+    evaluaciones,
+    parametros,
+    ciclo,
+  } = useAcademicStore();
   const dispatch = useAcademicDispatch();
   const clases = todasLasClases
     .filter((clase) => clase.comision === comision.id)
@@ -78,7 +84,7 @@ export function PlanillaComision({
       formatPorcentaje(cursada.resumen.porcentaje),
       CONDICION_LABELS[cursada.condicion],
     ]);
-    const fileName = `planilla-${slugifyFileName(unidad.nombre)}-${comision.cicloLectivo}.csv`;
+    const fileName = `planilla-${slugifyFileName(unidad.nombre)}-${ciclo.anio}.csv`;
 
     downloadCsv(fileName, toCsv(headers, csvRows));
   }
@@ -139,7 +145,7 @@ export function PlanillaComision({
     <div>
       <PageHeader
         title={unidad.nombre}
-        description={`${formatAnio(comision.anio)} año · Ciclo lectivo ${comision.cicloLectivo} · ${rows.length} inscriptos · ${getDocentesLabel(docentes)}`}
+        description={`${formatAnio(comision.anio)} año · Ciclo lectivo ${ciclo.anio} · ${rows.length} inscriptos · ${getDocentesLabel(docentes)}`}
         actions={
           <>
             <Button asChild variant="outline">

@@ -24,7 +24,7 @@ export function ListadoAlumnos({
   initialQuery?: string;
   initialCuota?: FiltroCuota;
 }) {
-  const { alumnos } = useAcademicStore();
+  const { alumnos, ciclo } = useAcademicStore();
   const [query, setQuery] = useState(initialQuery);
   const [anio, setAnio] = useState<FiltroAnio>("todos");
   const [cuota, setCuota] = useState<FiltroCuota>(initialCuota);
@@ -52,7 +52,7 @@ export function ListadoAlumnos({
     <div>
       <PageHeader
         title="Alumnos"
-        description={`Ciclo lectivo 2026 · ${formatNumero(activos)} alumnos activos`}
+        description={`Ciclo lectivo ${ciclo.anio} · ${formatNumero(activos)} alumnos activos`}
         actions={
           <Button asChild>
             <Link href="/alumnos/nuevo">
